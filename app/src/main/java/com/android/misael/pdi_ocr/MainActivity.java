@@ -5,14 +5,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
@@ -20,13 +24,14 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
 
     //log tag
     private static final String TAG = "OCVSample::Activity";
@@ -46,6 +51,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private MenuItem mItemPreviewCanny;
     private MenuItem mItemPreviewFeatures;
 
+    int i=0;
+    private Double[] h=new Double[20];
+    private Double[] k=new Double[20];
+    private double x=0;
+    private double y=0;
+
+    private List<Rect> ListOfRect = new ArrayList<Rect>();
+    Rect rectan = null;
+
     // These variables are used (at the moment) to fix camera orientation from 270degree to 0degree
     Mat mRgba;
     Mat mIntermediateMat;
@@ -60,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
+                    mOpenCvCameraView.setOnTouchListener(MainActivity.this);
                 } break;
                 default:
                 {
@@ -82,6 +97,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
         mOpenCvCameraView.setCvCameraViewListener(this);
+
+
+
     }
     @Override
     public void onPause()
@@ -124,7 +142,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+
+        mRgba = inputFrame.rgba();
+        /*
+       if(rectan != null)
+            Imgproc.rectangle(mRgba, rectan.tl(), rectan.br(),new Scalar( 0, 0, 255 ),0,8, 0 );
+
+        */
         final int viewMode = mViewMode;
+
+        Size sizeRgba = mRgba.size();
+
+        Mat rgbaInnerWindow;
+
+        int rows = (int) sizeRgba.height;
+        int cols = (int) sizeRgba.width;
+
+        int left = cols / 8;
+        int top = rows / 8;
+
+        int width = cols * 3 / 4;
+        int height = rows * 3 / 4;
+
         switch (viewMode) {
             case VIEW_MODE_GRAY:
                 // input frame has gray scale format
@@ -136,9 +175,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 break;
             case VIEW_MODE_CANNY:
                 // input frame has gray scale format
-                mRgba = inputFrame.rgba();
-                Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
-                Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
+                rgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
+                Imgproc.Canny(rgbaInnerWindow, mIntermediateMat, 80, 90);
+                Imgproc.cvtColor(mIntermediateMat, rgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+                rgbaInnerWindow.release();
+
+                //mRgba = inputFrame.rgba();
+                //Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
+                //Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
                 break;
             case VIEW_MODE_FEATURES:
                 // input frame has RGBA format
@@ -233,6 +277,27 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         return true;
     }
 
+    @Override
+    public boolean onTouch(View arg0,MotionEvent event) {
+
+        double cols = mRgba.cols();
+        double rows = mRgba.rows();
+
+        double xOffset = (mOpenCvCameraView.getWidth() - cols) / 2;
+        double yOffset = (mOpenCvCameraView.getHeight() - rows) / 2;
+
+        x = (double)(event).getX() - xOffset;
+        y = (double)(event).getY() - yOffset;
+
+
+        rectan = new Rect((int) (x-100), (int) (y-100), (int) (x+100), (int) (y+100));
+
+
+
+        return true;// don't need subsequent touch events
+    }
+
+
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
 
@@ -248,4 +313,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         return true;
     }
+
+    static {
+        System.loadLibrary("hello-android-jni");
+    }
+    public native String getMsgFromJni();
+
 }
