@@ -8,15 +8,14 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
-import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
@@ -40,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private static final int       VIEW_MODE_GRAY     = 1;
     private static final int       VIEW_MODE_CANNY    = 2;
     private static final int       VIEW_MODE_FEATURES = 5;
+    private static final int       OCR_TESSERACT = 7;
 
     // Loads camera view of OpenCV for us to use. This lets us see using OpenCV
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private MenuItem mItemPreviewGray;
     private MenuItem mItemPreviewCanny;
     private MenuItem mItemPreviewFeatures;
+    private MenuItem mItemTesseract;
 
     int i=0;
     private Double[] h=new Double[20];
@@ -86,9 +87,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+
 
         setContentView(R.layout.show_camera);
 
@@ -262,6 +268,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                 // FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
                 break;
+            case OCR_TESSERACT:
+
+
+
+                break;
+
         }
 
         return mRgba;
@@ -274,6 +286,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mItemPreviewGray = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");
         mItemPreviewFeatures = menu.add("Find features");
+        mItemTesseract = menu.add("OCR Tesseract");
         return true;
     }
 
@@ -309,6 +322,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             mViewMode = VIEW_MODE_CANNY;
         } else if (item == mItemPreviewFeatures) {
             mViewMode = VIEW_MODE_FEATURES;
+        } else if(item == mItemTesseract){
+            mViewMode = OCR_TESSERACT;
         }
 
         return true;
