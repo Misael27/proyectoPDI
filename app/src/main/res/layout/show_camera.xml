@@ -1,16 +1,69 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
 android:orientation="vertical"
 android:layout_width="match_parent"
 xmlns:opencv="http://schemas.android.com/apk/res-auto"
 android:layout_height="match_parent">
 
-<org.opencv.android.JavaCameraView
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:visibility="gone"
-    android:id="@+id/show_camera_activity_java_surface_view"
-    opencv:show_fps="true"
-    opencv:camera_id="any" />
 
+    <org.opencv.android.JavaCameraView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:visibility="gone"
+        android:id="@+id/show_camera_activity_java_surface_view"
+        opencv:show_fps="true"
+        opencv:camera_id="any" />
 
-</LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="100dp"
+        android:weightSum="1">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="0.8">
+            <TextView
+                android:id="@+id/txtDisp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/colorText"
+                android:text="texto"/>
+            <TextView
+                android:id="@+id/ocr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/colorPrimary"
+                android:text="false"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="0.2"
+            android:gravity ="center">
+        <Button
+            android:id="@+id/btnOK"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="OKClicked"
+            android:background="@color/colorPrimary"
+            android:textColor="@color/colorAccent"
+            android:text="@string/OK"
+            android:layout_marginBottom="8dp"/>
+        <Button
+            android:layout_weight="0.2"
+            android:id="@+id/btnSearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity ="center"
+            android:onClick="searchText"
+            android:background="@color/colorPrimary"
+            android:textColor="@color/colorAccent"
+            android:text="@string/search" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

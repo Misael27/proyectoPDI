@@ -1,5 +1,11 @@
 package com.android.misael.pdi_ocr;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -10,12 +16,14 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
@@ -27,6 +35,8 @@ import org.opencv.core.Size;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,11 +45,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //log tag
     private static final String TAG = "OCVSample::Activity";
 
-    private static final int       VIEW_MODE_RGBA     = 0;
-    private static final int       VIEW_MODE_GRAY     = 1;
-    private static final int       VIEW_MODE_CANNY    = 2;
-    private static final int       VIEW_MODE_FEATURES = 5;
-    private static final int       OCR_TESSERACT = 7;
+    Mat rgbaInnerWindow;
+
+    int top, left, width, height;
+    public static MyTessOCR mTessOCR;
+    public static boolean DoOCR = false;
+
+    private static final int       VIEW_MODE_RGBA = 0;
+    private static final int       OCR_RECTANGLE  = 1;
+    private static final int       OCR_TESSERACT  = 2;
+
+    public static Bitmap imgBmp = null;
 
     // Loads camera view of OpenCV for us to use. This lets us see using OpenCV
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -47,10 +63,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private int mViewMode;
 
     private MenuItem mItemPreviewRGBA;
-    private MenuItem mItemPreviewGray;
-    private MenuItem mItemPreviewCanny;
-    private MenuItem mItemPreviewFeatures;
+    private MenuItem mItemOCR_RECTANGLE;
     private MenuItem mItemTesseract;
+    Bitmap bmp;
 
     int i=0;
     private Double[] h=new Double[20];
@@ -66,6 +81,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat mIntermediateMat;
     Mat mGray;
     boolean isProcess = true;
+    BroadcastReceiver MyReceiver;
+
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -104,7 +121,24 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         mOpenCvCameraView.setCvCameraViewListener(this);
 
+        ArrayList<View> views = new ArrayList<View>();
+        views.add(findViewById(R.id.btnOK));
+        views.add(findViewById(R.id.txtDisp));
+        mOpenCvCameraView.addTouchables(views);
 
+        mTessOCR = new MyTessOCR(MainActivity.this);
+
+        MyReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String text = intent.getStringExtra("text");
+                TextView disp = (TextView) findViewById(R.id.txtDisp);
+                disp.setText(text);
+            }
+        };
+        IntentFilter intentFilterLoad = new IntentFilter();
+        intentFilterLoad.addAction("Broadcast");
+        registerReceiver(MyReceiver,intentFilterLoad);
 
     }
     @Override
@@ -150,130 +184,50 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         mRgba = inputFrame.rgba();
-        /*
-       if(rectan != null)
-            Imgproc.rectangle(mRgba, rectan.tl(), rectan.br(),new Scalar( 0, 0, 255 ),0,8, 0 );
 
-        */
         final int viewMode = mViewMode;
 
         Size sizeRgba = mRgba.size();
 
-        Mat rgbaInnerWindow;
-
         int rows = (int) sizeRgba.height;
         int cols = (int) sizeRgba.width;
 
-        int left = cols / 8;
-        int top = rows / 8;
+        left = cols / 8;
+        top = rows / 8;
 
-        int width = cols * 3 / 4;
-        int height = rows * 3 / 4;
+        width = cols * 3 / 4;
+        height = rows * 3 / 4;
 
         switch (viewMode) {
-            case VIEW_MODE_GRAY:
-                // input frame has gray scale format
-                Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
-                break;
             case VIEW_MODE_RGBA:
-                // input frame has RBGA format
                 mRgba = inputFrame.rgba();
                 break;
-            case VIEW_MODE_CANNY:
-                // input frame has gray scale format
-                rgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
-                Imgproc.Canny(rgbaInnerWindow, mIntermediateMat, 80, 90);
-                Imgproc.cvtColor(mIntermediateMat, rgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
-                rgbaInnerWindow.release();
-
-                //mRgba = inputFrame.rgba();
-                //Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
-                //Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
-                break;
-            case VIEW_MODE_FEATURES:
-                // input frame has RGBA format
-                mRgba = inputFrame.rgba();
+            case OCR_RECTANGLE:
                 mGray = inputFrame.gray();
-
-                Scalar CONTOUR_COLOR = new Scalar(255);
-                MatOfKeyPoint keypoint = new MatOfKeyPoint();
-                List<KeyPoint> listpoint = new ArrayList<KeyPoint>();
-                KeyPoint kpoint = new KeyPoint();
-                Mat mask = Mat.zeros(mGray.size(), CvType.CV_8UC1);
-                int rectanx1;
-                int rectany1;
-                int rectanx2;
-                int rectany2;
-
-                //
-                Scalar zeos = new Scalar(0, 0, 0);
-                // List<MatOfPoint> contour1 = new ArrayList<MatOfPoint>();
-                List<MatOfPoint> contour2 = new ArrayList<MatOfPoint>();
-                Mat kernel = new Mat(1, 50, CvType.CV_8UC1, Scalar.all(255));
-                Mat morbyte = new Mat();
-                Mat hierarchy = new Mat();
-
-                Rect rectan2 = new Rect();//
-                Rect rectan3 = new Rect();//
-                int imgsize = mRgba.height() * mRgba.width();
-                //
-                if (isProcess) {
-                    isProcess = false;
-                FeatureDetector detector = FeatureDetector
-                        .create(FeatureDetector.MSER);
-                detector.detect(mGray, keypoint);
-                listpoint = keypoint.toList();
-                //
-                for (int ind = 0; ind < listpoint.size(); ind++) {
-                    kpoint = listpoint.get(ind);
-                    rectanx1 = (int) (kpoint.pt.x - 0.5 * kpoint.size);
-                    rectany1 = (int) (kpoint.pt.y - 0.5 * kpoint.size);
-                    // rectanx2 = (int) (kpoint.pt.x + 0.5 * kpoint.size);
-                    // rectany2 = (int) (kpoint.pt.y + 0.5 * kpoint.size);
-                    rectanx2 = (int) (kpoint.size);
-                    rectany2 = (int) (kpoint.size);
-                    if (rectanx1 <= 0)
-                        rectanx1 = 1;
-                    if (rectany1 <= 0)
-                        rectany1 = 1;
-                    if ((rectanx1 + rectanx2) > mGray.width())
-                        rectanx2 = mGray.width() - rectanx1;
-                    if ((rectany1 + rectany2) > mGray.height())
-                        rectany2 = mGray.height() - rectany1;
-                    Rect rectant = new Rect(rectanx1, rectany1, rectanx2, rectany2);
-                    Mat roi = new Mat(mask, rectant);
-                    roi.setTo(CONTOUR_COLOR);
-
+                if(rectan != null) {
+                    Mat croppedPart;
+                    croppedPart = mGray.submat(rectan);
+                    Mat result = new Mat();
+                    Imgproc.GaussianBlur(croppedPart,croppedPart, new Size(3, 3), 0);
+                    Imgproc.threshold(croppedPart,result,0,255,Imgproc.THRESH_OTSU);
+                    bmp = Bitmap.createBitmap(result.width(), result.height(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(result, bmp);
+                    doOCR(bmp);
                 }
-
-                Imgproc.morphologyEx(mask, morbyte, Imgproc.MORPH_DILATE, kernel);
-                Imgproc.findContours(morbyte, contour2, hierarchy,
-                        Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
-                for (int ind = 0; ind < contour2.size(); ind++) {
-                    rectan3 = Imgproc.boundingRect(contour2.get(ind));
-                    if (rectan3.area() > 0.5 * imgsize || rectan3.area() < 100
-                            || rectan3.width / rectan3.height < 2) {
-                        Mat roi = new Mat(morbyte, rectan3);
-                        roi.setTo(zeos);
-
-                    } else
-                        Imgproc.rectangle(mRgba, rectan3.br(), rectan3.tl(),
-                                CONTOUR_COLOR);
-                }
-                    isProcess = true;
-                     return mRgba;
-                 }
-
-
-
-                // FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
                 break;
             case OCR_TESSERACT:
 
-
+                rgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
+                mRgba = inputFrame.rgba();
+                mGray = inputFrame.gray();
+                detectText();
+                rgbaInnerWindow.release();
 
                 break;
+        }
 
+        if(rectan != null) {
+            Imgproc.rectangle(mRgba, rectan.br(), rectan.tl(), new Scalar(0, 0, 255), 3);
         }
 
         return mRgba;
@@ -283,27 +237,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public boolean onCreateOptionsMenu(Menu menu) {
         Log.i(TAG, "called onCreateOptionsMenu");
         mItemPreviewRGBA = menu.add("Preview RGBA");
-        mItemPreviewGray = menu.add("Preview GRAY");
-        mItemPreviewCanny = menu.add("Canny");
-        mItemPreviewFeatures = menu.add("Find features");
-        mItemTesseract = menu.add("OCR Tesseract");
+        mItemOCR_RECTANGLE = menu.add("OCR rectangle area");
+        mItemTesseract = menu.add("OCR MSER");
         return true;
     }
 
     @Override
     public boolean onTouch(View arg0,MotionEvent event) {
 
-        double cols = mRgba.cols();
-        double rows = mRgba.rows();
-
-        double xOffset = (mOpenCvCameraView.getWidth() - cols) / 2;
-        double yOffset = (mOpenCvCameraView.getHeight() - rows) / 2;
-
-        x = (double)(event).getX() - xOffset;
-        y = (double)(event).getY() - yOffset;
+       // double cols = mRgba.cols();
+      //  double rows = mRgba.rows();
 
 
-        rectan = new Rect((int) (x-100), (int) (y-100), (int) (x+100), (int) (y+100));
+        x = (double)(event).getX();
+        y = (double)(event).getY();
+
+
+
+        rectan = new Rect((int) (x - 100), (int) (y - 100), (int) (x + 100), (int) (y + 100));
+
 
 
 
@@ -316,12 +268,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         if (item == mItemPreviewRGBA) {
             mViewMode = VIEW_MODE_RGBA;
-        } else if (item == mItemPreviewGray) {
-            mViewMode = VIEW_MODE_GRAY;
-        } else if (item == mItemPreviewCanny) {
-            mViewMode = VIEW_MODE_CANNY;
-        } else if (item == mItemPreviewFeatures) {
-            mViewMode = VIEW_MODE_FEATURES;
+        } else if (item == mItemOCR_RECTANGLE) {
+            mViewMode = OCR_RECTANGLE;
         } else if(item == mItemTesseract){
             mViewMode = OCR_TESSERACT;
         }
@@ -329,9 +277,123 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         return true;
     }
 
-    static {
+    public void detectText(){ //MSER
+        Scalar CONTOUR_COLOR = new Scalar(138,226,52);
+        MatOfKeyPoint keypoint = new MatOfKeyPoint();
+        List<KeyPoint> listpoint = new ArrayList<KeyPoint>();
+        KeyPoint kpoint = new KeyPoint();
+        Mat mask = Mat.zeros(mGray.size(), CvType.CV_8UC1);
+        int rectanx1;
+        int rectany1;
+        int rectanx2;
+        int rectany2;
+
+        Scalar zeos = new Scalar(0, 0, 0);
+        // List<MatOfPoint> contour1 = new ArrayList<MatOfPoint>();
+        List<MatOfPoint> contour2 = new ArrayList<>();
+        Mat kernel = new Mat(1, 50, CvType.CV_8UC1, Scalar.all(255));
+        Mat morbyte = new Mat();
+        Mat hierarchy = new Mat();
+
+        Rect rectan2 = new Rect();//
+        Rect rectan3;//
+        int imgsize = mRgba.height() * mRgba.width();
+        //
+        if (isProcess) {
+            isProcess = false;
+            FeatureDetector detector = FeatureDetector
+                    .create(FeatureDetector.MSER);
+            detector.detect(mGray, keypoint);
+            listpoint = keypoint.toList();
+            //
+            for (int ind = 0; ind < listpoint.size(); ind++) {
+                kpoint = listpoint.get(ind);
+                rectanx1 = (int) (kpoint.pt.x - 0.5 * kpoint.size);
+                rectany1 = (int) (kpoint.pt.y - 0.5 * kpoint.size);
+                rectanx2 = (int) (kpoint.size);
+                rectany2 = (int) (kpoint.size);
+                if (rectanx1 <= 0)
+                    rectanx1 = 1;
+                if (rectany1 <= 0)
+                    rectany1 = 1;
+                if ((rectanx1 + rectanx2) > mGray.width())
+                    rectanx2 = mGray.width() - rectanx1;
+                if ((rectany1 + rectany2) > mGray.height())
+                    rectany2 = mGray.height() - rectany1;
+                Rect rectant = new Rect(rectanx1, rectany1, rectanx2, rectany2);
+                Mat roi = new Mat(mask, rectant);
+                roi.setTo(CONTOUR_COLOR);
+
+            }
+
+            Imgproc.morphologyEx(mask, morbyte, Imgproc.MORPH_DILATE, kernel);
+            Imgproc.findContours(morbyte, contour2, hierarchy,
+                    Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+            for (int ind = 0; ind < contour2.size(); ind++) {
+
+                rectan3 = Imgproc.boundingRect(contour2.get(ind));
+                if (rectan3.area() > 0.5 * imgsize || rectan3.area() < 100
+                        || rectan3.width / rectan3.height < 2) {
+                    Mat roi = new Mat(morbyte, rectan3);
+                    roi.setTo(zeos);
+
+                } else {
+                    Imgproc.rectangle(mRgba, rectan3.br(), rectan3.tl(), CONTOUR_COLOR);
+                    Mat croppedPart;
+                    croppedPart = mGray.submat(rectan3);
+                    Mat result = new Mat(); //Improc.medianBlur(croppedPart,croppedPart, 3);
+                    Imgproc.GaussianBlur(croppedPart,croppedPart, new Size(3, 3), 0);
+                    Imgproc.threshold(croppedPart,result,0,255,Imgproc.THRESH_OTSU);
+                    bmp = Bitmap.createBitmap(result.width(), result.height(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(result, bmp);
+                    if (bmp != null) {
+                        doOCR(bmp);
+                    }
+                }
+            }
+            isProcess = true;
+        }
+    }
+
+    private void doOCR(final Bitmap bitmap) { //CALL TO TESSERACT
+        if(DoOCR) {
+            imgBmp = bitmap;
+            handleOCR.startService(this);
+        }
+
+    }
+
+    public void OKClicked(View view){
+        TextView disp = (TextView)findViewById(R.id.ocr);
+        DoOCR = !DoOCR;
+        disp.setText(String.valueOf(DoOCR));
+    }
+
+    public void searchText(View view) throws UnsupportedEncodingException {
+        String text = getText();
+        String query = URLEncoder.encode(text,"utf-8");
+        String url = "http://www.google.com/search?q="+query;
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(url));
+        startActivity(intent);
+    }
+
+    public void showText(String text){
+        TextView disp = (TextView)findViewById(R.id.txtDisp);
+        disp.setText(text);
+    }
+
+    public String getText(){
+        TextView disp = (TextView)findViewById(R.id.txtDisp);
+        return disp.getText().toString();
+    }
+
+       /* static {
         System.loadLibrary("hello-android-jni");
     }
-    public native String getMsgFromJni();
+    public native String getMsgFromJni();*/
+
+
+
 
 }
