@@ -67,13 +67,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private MenuItem mItemTesseract;
     Bitmap bmp;
 
-    int i=0;
-    private Double[] h=new Double[20];
-    private Double[] k=new Double[20];
     private double x=0;
     private double y=0;
 
-    private List<Rect> ListOfRect = new ArrayList<Rect>();
     Rect rectan = null;
 
     // These variables are used (at the moment) to fix camera orientation from 270degree to 0degree
@@ -205,14 +201,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             case OCR_RECTANGLE:
                 mGray = inputFrame.gray();
                 if(rectan != null) {
-                    Mat croppedPart;
-                    croppedPart = mGray.submat(rectan);
-                    Mat result = new Mat();
-                    Imgproc.GaussianBlur(croppedPart,croppedPart, new Size(3, 3), 0);
-                    Imgproc.threshold(croppedPart,result,0,255,Imgproc.THRESH_OTSU);
-                    bmp = Bitmap.createBitmap(result.width(), result.height(), Bitmap.Config.ARGB_8888);
-                    Utils.matToBitmap(result, bmp);
-                    doOCR(bmp);
+                    try {
+                        Mat croppedPart;
+                        croppedPart = mGray.submat(rectan);
+                        Mat result = new Mat();
+                        Imgproc.GaussianBlur(croppedPart, croppedPart, new Size(3, 3), 0);
+                        Imgproc.threshold(croppedPart, result, 0, 255, Imgproc.THRESH_OTSU);
+                        bmp = Bitmap.createBitmap(result.width(), result.height(), Bitmap.Config.ARGB_8888);
+                        Utils.matToBitmap(result, bmp);
+                        doOCR(bmp);
+                    }
+                    catch(Exception e){
+                        e.printStackTrace();
+                    }
                 }
                 break;
             case OCR_TESSERACT:
@@ -227,7 +228,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 
         if(rectan != null) {
-            Imgproc.rectangle(mRgba, rectan.br(), rectan.tl(), new Scalar(0, 0, 255), 3);
+            Imgproc.rectangle(mRgba, rectan.br(), rectan.tl(), new Scalar(0, 255, 0), 3);
         }
 
         return mRgba;
@@ -245,21 +246,21 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public boolean onTouch(View arg0,MotionEvent event) {
 
-       // double cols = mRgba.cols();
-      //  double rows = mRgba.rows();
+        double cols = mRgba.cols();// mRgba is your image frame
+        double rows = mRgba.rows();
 
+        double xOffset = (mOpenCvCameraView.getWidth() - cols) / 2;
+        double yOffset = (mOpenCvCameraView.getHeight() - rows) / 2;
+
+        x = (event).getX() - xOffset;
+        y = (event).getY() - yOffset;
 
         x = (double)(event).getX();
         y = (double)(event).getY();
 
+        rectan = new Rect((int) x-100, (int) y-100, 180, 120);
 
-
-        rectan = new Rect((int) (x - 100), (int) (y - 100), (int) (x + 100), (int) (y + 100));
-
-
-
-
-        return true;// don't need subsequent touch events
+        return true;
     }
 
 
@@ -341,7 +342,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Imgproc.rectangle(mRgba, rectan3.br(), rectan3.tl(), CONTOUR_COLOR);
                     Mat croppedPart;
                     croppedPart = mGray.submat(rectan3);
-                    Mat result = new Mat(); //Improc.medianBlur(croppedPart,croppedPart, 3);
+                    Mat result = new Mat();
                     Imgproc.GaussianBlur(croppedPart,croppedPart, new Size(3, 3), 0);
                     Imgproc.threshold(croppedPart,result,0,255,Imgproc.THRESH_OTSU);
                     bmp = Bitmap.createBitmap(result.width(), result.height(), Bitmap.Config.ARGB_8888);
