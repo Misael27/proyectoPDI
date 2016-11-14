@@ -1,0 +1,63 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    xmlns:opencv="http://schemas.android.com/apk/res-auto"
+    android:layout_height="match_parent">
+
+
+    <org.opencv.android.JavaCameraView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:visibility="gone"
+        android:id="@+id/show_camera_activity_java_surface_view"
+        opencv:show_fps="false"
+        opencv:camera_id="any" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="1"
+        android:layout_centerVertical="true"
+        android:layout_alignParentStart="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="0.8">
+            <TextView
+                android:id="@+id/txtDisp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/colorSecondary"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="0.2"
+            android:gravity ="right">
+            <Button
+                android:id="@+id/btnReconocer"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:onClick="ReconocerClicked"
+                android:background="@color/colorPrimary"
+                android:textColor="@color/colorAccent"
+                android:text="@string/btnReconocer"
+                android:layout_marginBottom="158dp"/>
+
+            <Button
+                android:id="@+id/btnOK"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:onClick="OKClicked"
+                android:background="@color/colorPrimary"
+                android:textColor="@color/colorText"
+                android:text="@string/OK"
+                android:layout_marginBottom="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

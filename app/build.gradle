@@ -33,4 +33,5 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile project(':openCVLibrary310')
     compile 'com.rmtheis:tess-two:6.0.3'
+    compile 'com.nononsenseapps:filepicker:2.5.0'
 }

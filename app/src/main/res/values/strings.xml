@@ -1,5 +1,14 @@
 <resources>
-    <string name="app_name">PDI-OCR</string>
-    <string name="OK">Reconocer</string>
+    <string name="app_name">PDI - OCR PROJECT</string>
+    <string name="OK">Obtener</string>
+    <string name="btnReconocer">Reconocer</string>
     <string name="search">Buscar</string>
+    <string name="imageButtonText">Archivo</string>
+    <string name="videoButtonText">Video</string>
+    <string name="titleText">Seleccione la entrada del texto</string>
+    <string name="procesando">Por favor espere, estamos Procesando el texto&#8230;</string>
+    <string name="btnReconocerActive">Reconociendo</string>
+    <string name="buttonSearchText">Buscar</string>
+    <string name="buttonSaveText">Guardar</string>titleResultText
+    <string name="titleResultText">Texto resultado obtenido:</string>
 </resources>
