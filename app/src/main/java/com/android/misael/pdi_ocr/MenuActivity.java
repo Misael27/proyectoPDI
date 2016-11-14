@@ -59,6 +59,7 @@ public class MenuActivity extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i("OPENCV", "OpenCV loaded successfully");
+                    showInterfaz(true);
 
                 } break;
                 default:
@@ -170,36 +171,29 @@ public class MenuActivity extends AppCompatActivity {
         }
     }
 
+    //TODO: Pasar este metodo a un servicio
     public void detectText(){ //MSER
-      //  Mat mGray = new Mat();
-
         Scalar CONTOUR_COLOR = new Scalar(138,226,52);
         MatOfKeyPoint keypoint = new MatOfKeyPoint();
-        List<KeyPoint> listpoint = new ArrayList<KeyPoint>();
-        KeyPoint kpoint = new KeyPoint();
+        List<KeyPoint> listpoint;
+        KeyPoint kpoint;
         Mat mask = Mat.zeros(mGray.size(), CvType.CV_8UC1);
         int rectanx1;
         int rectany1;
         int rectanx2;
         int rectany2;
-
         Scalar zeos = new Scalar(0, 0, 0);
-        // List<MatOfPoint> contour1 = new ArrayList<MatOfPoint>();
         List<MatOfPoint> contour2 = new ArrayList<>();
         Mat kernel = new Mat(1, 50, CvType.CV_8UC1, Scalar.all(255));
         Mat morbyte = new Mat();
         Mat hierarchy = new Mat();
-
-        Rect rectan2 = new Rect();//
-        Rect rectan3;//
+        Rect rectan3;
         int imgsize = mGray.height() * mGray.width();
-        //
 
-        FeatureDetector detector = FeatureDetector
-                .create(FeatureDetector.MSER);
+        FeatureDetector detector = FeatureDetector.create(FeatureDetector.MSER);
         detector.detect(mGray, keypoint);
         listpoint = keypoint.toList();
-        //
+
         for (int ind = 0; ind < listpoint.size(); ind++) {
             kpoint = listpoint.get(ind);
             rectanx1 = (int) (kpoint.pt.x - 0.5 * kpoint.size);
@@ -221,8 +215,7 @@ public class MenuActivity extends AppCompatActivity {
         }
 
         Imgproc.morphologyEx(mask, morbyte, Imgproc.MORPH_DILATE, kernel);
-        Imgproc.findContours(morbyte, contour2, hierarchy,
-                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+        Imgproc.findContours(morbyte, contour2, hierarchy,Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
         tot = contour2.size();
         resultImage = "";
         cont = 0;
@@ -271,11 +264,14 @@ public class MenuActivity extends AppCompatActivity {
         TextView textView3 = (TextView)findViewById(R.id.textView3);
         Button videoButton = (Button)findViewById(R.id.videoButton);
         Button imagenButton = (Button)findViewById(R.id.imagenButton);
+        TextView cargando = (TextView)findViewById(R.id.cargando);
         if(show){
             textView2.setVisibility(View.VISIBLE);
             videoButton.setVisibility(View.VISIBLE);
             imagenButton.setVisibility(View.VISIBLE);
             textView3.setVisibility(View.GONE);
+            textView3.setVisibility(View.GONE);
+            cargando.setVisibility(View.GONE);
         }
         else {
             textView2.setVisibility(View.GONE);

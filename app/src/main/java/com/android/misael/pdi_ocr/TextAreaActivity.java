@@ -6,8 +6,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.nononsenseapps.filepicker.FilePickerActivity;
 
@@ -62,6 +64,10 @@ public class TextAreaActivity extends AppCompatActivity {
         try {
             FileOutputStream stream = new FileOutputStream(file);
             stream.write(text.getBytes());
+            Toast toast;
+            toast = Toast.makeText(getApplicationContext(),"Archivo guardado", Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.CENTER| Gravity.CENTER_HORIZONTAL,0,0);
+            toast.show();
         }catch (Exception e){
             e.printStackTrace();
         }

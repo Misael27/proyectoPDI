@@ -285,6 +285,7 @@ public class videoActivity extends AppCompatActivity implements CameraBridgeView
         }
         else{
             DoOCR = false;
+            mTessOCR.stopRecognition();
             reconocer.setText(R.string.btnReconocer);
             reconocer.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
         }

@@ -11,4 +11,5 @@
     <string name="buttonSearchText">Buscar</string>
     <string name="buttonSaveText">Guardar</string>titleResultText
     <string name="titleResultText">Texto resultado obtenido:</string>
+    <string name="cargando">Cargando&#8230;</string>
 </resources>
